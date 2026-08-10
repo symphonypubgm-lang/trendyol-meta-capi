@@ -692,6 +692,7 @@ def tiktok_send_purchase(order, event_id, value):
 
     payload = {
         "event_set_id": TIKTOK_EVENT_SET_ID,
+        "test_event_code": "TEST19521",
         "event": "Purchase",
         "event_id": str(event_id),
         "timestamp": time.strftime(
