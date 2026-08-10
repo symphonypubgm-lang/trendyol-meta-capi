@@ -74,7 +74,7 @@ def send_event():
     event = {
         "event_name": event_name,
         "event_time": event_time,
-        "action_source": "website",
+        "action_source": "other",
         "user_data": user_data
     }
 
