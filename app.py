@@ -12,7 +12,12 @@ app = Flask(__name__)
 META_PIXEL_ID = os.environ.get("META_PIXEL_ID")
 META_ACCESS_TOKEN = os.environ.get("META_ACCESS_TOKEN")
 META_API_VERSION = os.environ.get("META_API_VERSION", "v24.0")
+# =========================
+# TIKTOK
+# =========================
 
+TIKTOK_ACCESS_TOKEN = os.environ.get("TIKTOK_ACCESS_TOKEN")
+TIKTOK_EVENT_SET_ID = os.environ.get("TIKTOK_EVENT_SET_ID")
 # =========================
 # TRENDYOL
 # =========================
@@ -645,15 +650,20 @@ def sync_orders():
                 event_id=event_id,
                 user_data=user_data,
                 custom_data=custom_data
-            )
-
+ )
+tiktok_result = tiktok_send_purchase(
+    order=order,
+    event_id=event_id,
+    value=value
+)
             results.append({
                 "orderNumber":
                     order_number,
                 "packageId":
                     package_id,
                 "value": value,
-                "meta": result
+                "meta": result,
+                "tiktok": tiktok_result
             })
 
         return jsonify({
@@ -666,7 +676,62 @@ def sync_orders():
             "error": str(e)
         }), 502
 
+def tiktok_send_purchase(order, event_id, value):
+    if not TIKTOK_ACCESS_TOKEN or not TIKTOK_EVENT_SET_ID:
+        return {"ok": False, "error": "TikTok bilgileri eksik"}
 
+    user = build_meta_user_data(order)
+
+    tiktok_user = {}
+
+    if user.get("em"):
+        tiktok_user["emails"] = user["em"]
+
+    if user.get("ph"):
+        tiktok_user["phone_numbers"] = user["ph"]
+
+    payload = {
+        "event_set_id": TIKTOK_EVENT_SET_ID,
+        "event": "Purchase",
+        "event_id": str(event_id),
+        "timestamp": time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ",
+            time.gmtime()
+        ),
+        "context": {
+            "user": tiktok_user
+        },
+        "properties": {
+            "order_id": str(
+                order.get("orderNumber")
+                or order.get("id")
+            ),
+            "currency": "TRY",
+            "value": float(value),
+            "event_channel": "other"
+        }
+    }
+
+    r = requests.post(
+        "https://business-api.tiktok.com/open_api/v1.3/offline/track/",
+        headers={
+            "Access-Token": TIKTOK_ACCESS_TOKEN,
+            "Content-Type": "application/json"
+        },
+        json=payload,
+        timeout=20
+    )
+
+    try:
+        response_data = r.json()
+    except Exception:
+        response_data = {"text": r.text}
+
+    return {
+        "ok": r.status_code == 200 and response_data.get("code") == 0,
+        "status": r.status_code,
+        "response": response_data
+    }
 if __name__ == "__main__":
     port = int(
         os.environ.get(
