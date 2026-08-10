@@ -651,10 +651,10 @@ def sync_orders():
                 user_data=user_data,
                 custom_data=custom_data
  )
-tiktok_result = tiktok_send_purchase(
-    order=order,
-    event_id=event_id,
-    value=value
+            tiktok_result = tiktok_send_purchase(
+            order=order,
+            event_id=event_id,
+            value=value
 )
             results.append({
                 "orderNumber":
